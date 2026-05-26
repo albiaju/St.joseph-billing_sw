@@ -42,40 +42,45 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
+        shop = self.context['shop']         # ← get shop from view
 
-        # Auto generate next bill number
-        last_invoice = Invoice.objects.order_by('-bill_number').first()
+        # Bill number unique PER SHOP
+        last_invoice = Invoice.objects.filter(shop=shop).order_by('-bill_number').first()
         if last_invoice:
             validated_data['bill_number'] = last_invoice.bill_number + 1
         else:
-            validated_data['bill_number'] = 21228  # continues from paper bills
+            # First bill for this shop
+            if shop.id == 1:
+                validated_data['bill_number'] = 21228   # continues Shop 1's paper bills
+            else:
+                validated_data['bill_number'] = 1001    # Shop 2 starts fresh
 
-        # Auto calculate totals from items
         subtotal = sum(
             float(item['quantity']) * float(item['rate'])
             for item in items_data
         )
         subtotal = round(subtotal, 2)
-        cgst = round(subtotal * 0.09, 2)
-        sgst = round(subtotal * 0.09, 2)
-        total = round(subtotal + cgst + sgst, 2)
+        cgst     = round(subtotal * 0.09, 2)
+        sgst     = round(subtotal * 0.09, 2)
+        total    = round(subtotal + cgst + sgst, 2)
 
-        validated_data['subtotal'] = subtotal
-        validated_data['cgst_amount'] = cgst
-        validated_data['sgst_amount'] = sgst
+        validated_data['shop']         = shop
+        validated_data['subtotal']     = subtotal
+        validated_data['cgst_amount']  = cgst
+        validated_data['sgst_amount']  = sgst
         validated_data['total_amount'] = total
 
         invoice = Invoice.objects.create(**validated_data)
 
-        # Save each item with auto sl_no and auto amount
         for i, item_data in enumerate(items_data, start=1):
             InvoiceItem.objects.create(
-                invoice=invoice,
-                sl_no=i,
-                particulars=item_data['particulars'],
-                quantity=item_data['quantity'],
-                rate=item_data['rate'],
-                amount=round(float(item_data['quantity']) * float(item_data['rate']), 2)
+                invoice     = invoice,
+                sl_no       = i,
+                particulars = item_data['particulars'],
+                quantity    = item_data['quantity'],
+                rate        = item_data['rate'],
+                amount      = round(
+                    float(item_data['quantity']) * float(item_data['rate']), 2
+                )
             )
-
         return invoice

@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'corsheaders',
 
     # Our apps
+    'accounts',    
     'invoices',
     'purchases',
     'reports',
@@ -66,11 +67,6 @@ DATABASES = {
     }
 }
 
-# Allow React frontend to talk to Django
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
 
 CORS_ALLOW_ALL_ORIGINS = True  # fine for localhost only
 
@@ -91,3 +87,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+SESSION_COOKIE_AGE = 86400          # session lasts 24 hours
+SESSION_SAVE_EVERY_REQUEST = True   # resets timer on every action
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+
+# Allow React to send login cookies
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
